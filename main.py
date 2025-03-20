@@ -1,118 +1,140 @@
 import tkinter as tk
+import time
 import random
+import math
+from threading import Thread
+
+
+class Window:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("Breakfast Simulation")
+        self.canvas = tk.Canvas(self.root, width=1000, height=500, bg="white")
+        self.canvas.pack()
+        self.labels = {}
+        self.create_labels()
+        self.draw_grid()
+        self.root.bind("<space>", self.on_spacebar)
+
+    def create_labels(self):
+        label_names = ["simulation time", "clean dish", "dirty dish", "free seat", "served guest"]
+        self.label_frame = tk.Frame(self.root)
+        self.label_frame.pack(side="bottom", fill="x")
+
+        for name in label_names:
+            tk.Label(self.label_frame, text=name).pack(side="left", padx=10)
+            self.labels[name] = tk.Label(self.label_frame, text="0")
+            self.labels[name].pack(side="left", padx=10)
+
+    def draw_grid(self):
+        for x in range(0, 1500, 10):
+            self.canvas.create_line(x, 0, x, 1000, fill="lightgray")
+        for y in range(0, 1000, 10):
+            self.canvas.create_line(0, y, 1500, y, fill="lightgray")
+
+    def draw_circle(self, x, y, diameter, color="white", number=0):
+        r = diameter // 2
+        self.canvas.create_oval(x - r, y - r, x + r, y + r, fill=color, outline="black")
+        self.canvas.create_text(x, y, text=str(number), fill="black")
+
+    def draw_square(self, x, y, side, color="white", number=0):
+        half = side // 2
+        self.canvas.create_rectangle(x - half, y - half, x + half, y + half, fill=color, outline="black")
+        self.canvas.create_text(x, y, text=str(number), fill="black")
+
+    def draw_line(self, x1, y1, x2, y2, width=2, color="black"):
+        self.canvas.create_line(x1, y1, x2, y2, width=width, fill=color)
+
+    def update_label(self, name, value):
+        if name in self.labels:
+            self.labels[name].config(text=str(value))
+
+    def on_spacebar(self, event):
+        simulation.step()
 
 
 class Agent:
-    def __init__(self, canvas, x, y, number, color="blue", font_color="white"):
-        self.canvas = canvas
-        self.x, self.y = x, y
-        self.number = number
+    def __init__(self, x, y, shape, color, agent_id):
+        self.x = x
+        self.y = y
+        self.shape = shape
         self.color = color
-        self.font_color = font_color
-        self.radius = 10  # Radius of the agent circle
-        self.create_agent()
+        self.agent_id = agent_id
+        self.state = None
 
-    def create_agent(self):
-        self.oval = self.canvas.create_oval(
-            self.x - self.radius, self.y - self.radius,
-            self.x + self.radius, self.y + self.radius,
-            fill=self.color, outline="black"
-        )
-        self.text = self.canvas.create_text(
-            self.x, self.y, text=str(self.number),
-            fill=self.font_color, font=("Arial", 10, "bold")
-        )
+    def step(self):
+        pass
 
-    def move(self, dx, dy):
-        self.x += dx
-        self.y += dy
-        self.canvas.move(self.oval, dx, dy)
-        self.canvas.move(self.text, dx, dy)
+
+class Customer(Agent):
+    def __init__(self, x, y, agent_id):
+        super().__init__(x, y, "circle", "red", agent_id)
+
+    def step(self):
+        pass  # To be implemented
+
+
+class Worker(Agent):
+    def __init__(self, x, y, agent_id):
+        super().__init__(x, y, "square", "blue", agent_id)
+
+    def step(self):
+        pass  # To be implemented
+
+
+class Dish:
+    def __init__(self, x, y, state="clean"):
+        self.x = x
+        self.y = y
+        self.state = state
+
+    def move(self, x, y):
+        self.x = x
+        self.y = y
 
 
 class Simulation:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Simulation GUI")
-        self.root.geometry("1600x1000")  # Set initial window size
-
-        self.frame = tk.Frame(root)
-        self.frame.pack(side=tk.LEFT, fill=tk.Y)
-
-        self.labels = {}
-        label_texts = ["clean dish", "dirty dish", "free seat", "current time", "served guest"]
-        for text in label_texts:
-            self.labels[text] = tk.Label(self.frame, text=f"{text}: 0", font=("Arial", 12))
-            self.labels[text].pack()
-
-        self.start_button = tk.Button(self.frame, text="Start", command=self.toggle_simulation)
-        self.start_button.pack()
-
-        self.canvas = tk.Canvas(root, bg="white", width=1500, height=1000)
-        self.canvas.pack(side=tk.RIGHT, expand=True, fill=tk.BOTH)
-
-        self.grid_width = 3000
-        self.grid_height = 1000
-        self.active_simulation = False
-        self.draw_grid()
-
-        self.agents = [Agent(self.canvas, random.randint(50, 500), random.randint(50, 500), random.randint(1, 999)) for
-                       _ in range(5)]
-
-        self.root.bind("<Up>", lambda e: self.move_agents(0, -10))
-        self.root.bind("<Down>", lambda e: self.move_agents(0, 10))
-        self.root.bind("<Left>", lambda e: self.move_agents(-10, 0))
-        self.root.bind("<Right>", lambda e: self.move_agents(10, 0))
-        self.root.bind("<space>", lambda e: self.step_agents() if not self.active_simulation else None)
+    def __init__(self):
+        self.simulation_running = False
+        self.time_counter = 360  # Starts at 6:00 AM
+        self.dishes = []
+        self.customers = []
+        self.last_time = time.time()
 
     def toggle_simulation(self):
-        self.active_simulation = not self.active_simulation
-        self.start_button.config(text="Stop" if self.active_simulation else "Start")
-        if self.active_simulation:
-            self.run_simulation()
+        self.simulation_running = not self.simulation_running
+        if self.simulation_running:
+            Thread(target=self.run, daemon=True).start()
 
-    def run_simulation(self):
-        if self.active_simulation:
-            self.step_agents()
-            self.root.after(1000, self.run_simulation)
+    def run(self):
+        while self.simulation_running:
+            current_time = time.time()
+            if current_time - self.last_time >= 1:
+                self.last_time = current_time
+                self.step()
 
-    def step_agents(self):
-        occupied_positions = {(agent.x, agent.y) for agent in self.agents}
-        for agent in self.agents:
-            possible_moves = [(agent.x + dx, agent.y + dy) for dx, dy in [(-10, -10), (0, -10), (10, -10),
-                                                                          (-10, 0), (10, 0),
-                                                                          (-10, 10), (0, 10), (10, 10)]]
-            valid_moves = [(x, y) for x, y in possible_moves if
-                           (x, y) not in occupied_positions and 0 <= x <= 1500 and 0 <= y <= 1000]
-            if valid_moves:
-                new_x, new_y = random.choice(valid_moves)
-                agent.move(new_x - agent.x, new_y - agent.y)
-                occupied_positions.add((new_x, new_y))
-
-    def draw_grid(self):
-        self.canvas.delete("grid_line")
-        width = self.canvas.winfo_width()
-        height = self.canvas.winfo_height()
-        scale_x = width / self.grid_width
-        scale_y = height / self.grid_height
-        spacing_x = width // 30  # Approximate scale
-        spacing_y = height // 10
-        for i in range(0, width, 10):
-            self.canvas.create_line(i, 0, i, height, fill="lightgray", tags="grid_line")
-        for j in range(0, height, 10):
-            self.canvas.create_line(0, j, width, j, fill="lightgray", tags="grid_line")
-        self.root.after(500, self.draw_grid)  # Redraw grid periodically to adjust scaling
-
-    def move_agents(self, dx, dy):
-        for agent in self.agents:
-            agent.move(dx, dy)
-
-    def update_label(self, label, value):
-        if label in self.labels:
-            self.labels[label].config(text=f"{label}: {value}")
+    def step(self):
+        self.time_counter += 1
+        hh, mm = divmod(self.time_counter, 60)
+        if hh >= 11 and mm >= 30:
+            self.simulation_running = False
+            return
+        window.update_label("simulation time", f"{hh:02d}:{mm:02d}")
+        if self.time_counter == 360:  # 6:00 AM
+            self.dishes = [Dish(20, 20, "clean") for _ in range(40)]
+        if 390 <= self.time_counter <= 600:  # 6:30 AM to 10:00 AM
+            if random.random() < 0.5:  # Gaussian-like probability
+                self.customers.append(Customer(random.randint(50, 1450), random.randint(50, 950), len(self.customers)))
+            for customer in self.customers:
+                customer.step()
+            clean_count = sum(1 for dish in self.dishes if dish.state == "clean")
+            dirty_count = len(self.dishes) - clean_count
+            window.update_label("clean dish", clean_count)
+            window.update_label("dirty dish", dirty_count)
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    sim = Simulation(root)
-    root.mainloop()
+    window = Window()
+    simulation = Simulation()
+    simulation.toggle_simulation()
+    window.root.mainloop()
