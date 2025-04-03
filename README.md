@@ -4,6 +4,13 @@
 simulate the breakdast process at a hotel to
 optimise the placement of item and guest
 
+# Current state :
+generate synthetic data in the form of CSV based on measured parameters
+
+
+# TODO :
+implement a more complete simulator to simulate more realistically the non linear blocking process.
+
 # Programme working
 ### class window
 define the canva (the canva is 1500 by 1000 px) and the windows can be bigger but not smaller and the canva size stay constant,
